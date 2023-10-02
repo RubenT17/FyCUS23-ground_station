@@ -22,7 +22,7 @@ class RotatorCPanelController(QMainWindow):
         self.rotatorCPanelWindow = Ui_rotatorControlPanel()
         self.rotatorCPanelWindow.setupUi(self)
         self.show()
-        self.center()
+        self.topRight()
 
         # Set parameters default configuration 
         self.tr_freq = GLOBALS.TR_SEND_FREQ
@@ -275,6 +275,10 @@ class RotatorCPanelController(QMainWindow):
         elif status == '4':
             return "homing"
     
+    def topRight(self):
+        desktop_geo = QApplication.desktop().screenGeometry()
+        self.move(desktop_geo.topRight() - self.rect().topRight())
+
     def center(self):
         frame_geo = self.frameGeometry()
         screen_geo = QApplication.desktop().screenGeometry().center()
