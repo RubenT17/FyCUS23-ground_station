@@ -771,6 +771,13 @@
     </widget>
     <addaction name="menuConfigure"/>
    </widget>
+   <widget class="QMenu" name="menuReload">
+    <property name="title">
+     <string>Application</string>
+    </property>
+    <addaction name="actReload"/>
+   </widget>
+   <addaction name="menuReload"/>
    <addaction name="menuParameters"/>
   </widget>
   <action name="actTrSendFreq">
@@ -781,6 +788,11 @@
   <action name="actRefCoords">
    <property name="text">
     <string>Point reference coordinates</string>
+   </property>
+  </action>
+  <action name="actReload">
+   <property name="text">
+    <string>Reload</string>
    </property>
   </action>
  </widget>

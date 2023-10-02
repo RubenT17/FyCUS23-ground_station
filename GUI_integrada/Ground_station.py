@@ -11,6 +11,7 @@ import bus_packet as bp
 import src.globals as GLOBALS
 
 from src.rotatorConnectController import RotatorConnectController
+from src.displayPanel import displayPanel
 from PyQt5 import QtWidgets
 
 
@@ -50,6 +51,8 @@ def decodeTM(data):
         pos+=2
         accel_z = bytes2int(data.data[last_pos:pos])
         ret.append(accel_z)
+        GLOBALS.GLOBAL_ACELL=[accel_x,accel_y,accel_z]
+
 
     if(data.data[0] & bp.REQUIRED_DATA_GYRO):
         last_pos = pos
@@ -64,6 +67,8 @@ def decodeTM(data):
         pos+=2
         gyro_z = bytes2int(data.data[last_pos:pos])
         ret.append(gyro_z)
+        GLOBALS.GLOBAL_GYRO=[gyro_x,gyro_y,gyro_z]
+
 
     if(data.data[0] & bp.REQUIRED_DATA_MAGNETOMETER):
         last_pos = pos
@@ -77,7 +82,9 @@ def decodeTM(data):
         last_pos = pos
         pos+=2
         mag_z = bytes2int(data.data[last_pos:pos])
-        ret.append(mag_z)                      
+        ret.append(mag_z) 
+        GLOBALS.GLOBAL_MAG=[mag_x,mag_y,mag_z]
+                     
 
 
     if(data.data[0] & bp.REQUIRED_DATA_PRESSURE):
@@ -85,29 +92,36 @@ def decodeTM(data):
         pos+=4
         pressure = bytes2float(data.data[last_pos:pos])
         ret.append(pressure)  
+        GLOBALS.GLOBAL_PRESS=[pressure]
 
-    if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_0):
+    if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_OUTDOOR):
         last_pos = pos
         pos+=4
         t = bytes2float(data.data[last_pos:pos])
-        ret.append(t) 
-        
-    if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_1):
-        last_pos = pos
-        pos+=4
-        pressure = bytes2float(data.data[last_pos:pos])
-        
-    if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_2):
+        GLOBALS.GLOBAL_TEMP[0]=t
+        ret.append(t)
+
+    if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_UP):
         last_pos = pos
         pos+=4
         t = bytes2float(data.data[last_pos:pos])
-        ret.append(t) 
+        ret.append(t)
+        GLOBALS.GLOBAL_TEMP[1]=t
+
         
-    if(data.data[1] & bp.REQUIRED_DATA_TEMPERATURE_3):
+    if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_BATTERY):
+        last_pos = pos
+        pos+=4
+        t = bytes2float(data.data[last_pos:pos])
+        ret.append(t)
+        GLOBALS.GLOBAL_TEMP[2]=t
+        
+    if(data.data[1] & bp.REQUIRED_DATA_TEMPERATURE_DOWN):
         last_pos = pos
         pos+=4
         y = bytes2float(data.data[last_pos:pos])
         ret.append(t) 
+        GLOBALS.GLOBAL_TEMP[3]=t
 
     # if(data.data[1] & bp.REQUIRED_DATA_TEMPERATURE_3):
     #     last_pos = pos
@@ -120,6 +134,9 @@ def decodeTM(data):
         pos+=4
         time = bytes2float(data.data[last_pos:pos])
         ret.append(time)    
+        GLOBALS.GLOBAL_TIME=[time]
+
+    GLOBALS.GLOBAL_TM=ret
     return ret
 
 
@@ -252,6 +269,7 @@ def mp_data_process(data_in, data_gnss, data_tm):
                 telemetry = decodeTM(data)
                 data_gnss.put(telemetry[0])
                 print(telemetry)
+                print(GLOBALS.GLOBAL_TM)
               
                
             data_tm.put(data)
@@ -282,6 +300,7 @@ def gnss_buffer_get(data_gnss_buffer):
             gnss_data[3]=chr(gnss_data[3])
             gnss_data=nmea2geodetic(gnss_data)
             GLOBALS.GLOBAL_GNSS=gnss_data
+            GLOBALS.GLOBAL_GNSSdisp=gnss_data
         except:
             pass
 def mp_antenna(data_gnss_buffer):
@@ -289,30 +308,52 @@ def mp_antenna(data_gnss_buffer):
     GUI de la antena.
     A completar por Julio.
     """
+    # app = QtWidgets.QApplication(sys.argv)
+    # gps_connect_window = RotatorConnectController()   
+
+    # rotGUI_thread = th.Thread(target=gnss_buffer_get, args=([data_gnss_buffer]))
+    # rotGUI_thread.start()
+    # sys.exit(app.exec_())
     app = QtWidgets.QApplication(sys.argv)
-    gps_connect_window = RotatorConnectController()   
+    exit_status = 1 # Bad exit 
 
     rotGUI_thread = th.Thread(target=gnss_buffer_get, args=([data_gnss_buffer]))
     rotGUI_thread.start()
-    sys.exit(app.exec_())
+    while exit_status == 1:
+        gps_connect_window = RotatorConnectController()
+        exit_status = app.exec_() # 0 if normal exit
 
+    sys.exit()
+
+def tm_buffer_get(data_gnss_buffer):
+    while True:
+        try:
+            tm_buffer=tm_buffer.get()
+            print(tm_buffer)
+            GLOBALS.GLOBAL_TM=tm_buffer
+        except:
+            pass
 def gui_tmtc(tm_buffer, tc_buffer):
     """
     GUI de TM/TC.
     A completar por Julio.
     """    
+    # dispLoop_thread = th.Thread(target=tm_buffer_get, args=([tm_buffer]))
+    # dispLoop_thread.start()
     # No poner en esta función el while True porque no hace bien la excepción del teclado
-    
+    app = QtWidgets.QApplication(sys.argv)
+    gps_connect_window = displayPanel(tc_buffer)
+    sys.exit(app.exec_())
     # Testing
-    import random
-    if keyboard.is_pressed('q'):  # if key 'q' is pressed 
-        time.sleep(0.5)
-        print("Enviando TC")
-        datos = [random.randint(0, 255) for _ in range(10)]
-        status, data = bp.bus_packet_EncodePacketize(bp.BUS_PACKET_TYPE_TC, bp.APID_TC_ARE_YOU_ALIVE, bp.BUS_PACKET_ECF_EXIST, datos, random.randint(0, 10))
-        if status == 0:
-            tc_buffer.put(data)
-    pass
+    # import random
+    # if keyboard.is_pressed('q'):  # if key 'q' is pressed 
+    #     time.sleep(0.5)
+    #     print("Enviando TC")
+    #     datos = [random.randint(0, 255) for _ in range(10)]
+    #     status, data = bp.bus_packet_EncodePacketize(bp.BUS_PACKET_TYPE_TC, bp.APID_TC_ARE_YOU_ALIVE, bp.BUS_PACKET_ECF_EXIST, datos, random.randint(0, 10))
+    #     if status == 0:
+    #         tc_buffer.put(data)
+    # pass
     
 
     
@@ -329,12 +370,10 @@ if __name__ == '__main__':
     mp_data_process_handle = mp.Process(name="Data process", target=mp_data_process, args=(tm_buffer, gnss_buffer, tm_tmtc_buffer))
     mp_modem_handle.start(), mp_data_process_handle.start(), mp_antenna_handle.start()
 
-    while True:
-        try:
-            gui_tmtc(tm_tmtc_buffer, tc_buffer)
+    try:
+        gui_tmtc(tm_tmtc_buffer, tc_buffer)
         
-        except KeyboardInterrupt:
+    except KeyboardInterrupt:
             mp_modem_handle.terminate()
             mp_data_process_handle.terminate()
             mp_antenna_handle.terminate()
-            break

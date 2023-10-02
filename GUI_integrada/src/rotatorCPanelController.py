@@ -1,6 +1,7 @@
 import threading, time
 import src.globals as GLOBALS
-from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QLineEdit, QLabel, QVBoxLayout, QPushButton, QComboBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QLineEdit, QLabel, QVBoxLayout, QPushButton, QComboBox, QMessageBox
+from PyQt5.QtCore import QCoreApplication
 from interfaces.rotatorControlPanelUi import Ui_rotatorControlPanel
 from src.RotatorIOController import RotatorIOHandler, RotatorPacket
 from src.Gps2Rotator import Gps2Rotator
@@ -22,7 +23,7 @@ class RotatorCPanelController(QMainWindow):
         self.rotatorCPanelWindow.setupUi(self)
         self.show()
         self.center()
-        
+
         # Set parameters default configuration 
         self.tr_freq = GLOBALS.TR_SEND_FREQ
         self.ref_latitude = GLOBALS.REF_LAT
@@ -42,10 +43,11 @@ class RotatorCPanelController(QMainWindow):
         # Actions
         self.rotatorCPanelWindow.actTrSendFreq.triggered.connect(self.actConfigTrackingFreq)
         self.rotatorCPanelWindow.actRefCoords.triggered.connect(self.actConfigRefCoords)
+        self.rotatorCPanelWindow.actReload.triggered.connect(self.actPannicMsgBox)
 
         #Events
         self.rotatorCPanelWindow.boxDataAz.textChanged.connect(lambda: self.eveTextEdited(3))
-        self.rotatorCPanelWindow.boxDataEl.textChanged.connect(lambda: self.eveTextEdited(2))
+        self.rotatorCPanelWindow.boxDataEl.textChanged.connect(lambda: self.eveTextEdited(3))
 
         self.rotatorCPanelWindow.boxDataAz.returnPressed.connect(self.eveReturnPressed)
         self.rotatorCPanelWindow.boxDataEl.returnPressed.connect(self.eveReturnPressed)
@@ -54,6 +56,7 @@ class RotatorCPanelController(QMainWindow):
         '''
         @Overrides
         '''
+        print("Closing interfaces...")
         #Gently stop possible running threads
         self.stop_read_event.set()
         self.stop_tracking_event.set()
@@ -62,6 +65,11 @@ class RotatorCPanelController(QMainWindow):
         self.rotator_handler.serial.close()
         event.accept()
    
+    def pannicRestart(self):
+        self.close()
+        QCoreApplication.exit(1)
+
+
     #####################################
     ##### Buttons behaviour (Slots) #####
     #####################################
@@ -166,8 +174,8 @@ class RotatorCPanelController(QMainWindow):
                     altEllip=0.0
                 
                 # Imprimo datos de GPS
-                self.rotatorCPanelWindow.lblLatitude.setText(str(round(lat,4)))
-                self.rotatorCPanelWindow.lblLongitude.setText(str(round(lon,4)))
+                self.rotatorCPanelWindow.lblLatitude.setText(str(round(lat,3)))
+                self.rotatorCPanelWindow.lblLongitude.setText(str(round(lon,3)))
                 if not alt_error:
                     self.rotatorCPanelWindow.lblAltitude.setText(str(round(altOrt,4)))
                 else:
@@ -338,3 +346,15 @@ class RotatorCPanelController(QMainWindow):
             return float(line_edit_lat.text()), float(line_edit_lon.text()), float(line_edit_alt.text())
         else:
             return None, None, None
+
+    def actPannicMsgBox(self):
+        msgBox = QMessageBox()
+        msgBox.resize(400, 300)
+        msgBox.setIcon(QMessageBox.Icon.Warning)
+        msgBox.setWindowTitle("Restart application")
+        msgBox.setText("Are you sure you want to restart the application?")
+        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+        result = msgBox.exec()
+
+        if result == QMessageBox.Yes:
+            self.pannicRestart()
