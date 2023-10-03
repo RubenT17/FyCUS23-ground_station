@@ -7,7 +7,7 @@ from src.RotatorIOController import RotatorIOHandler, RotatorPacket
 from src.Gps2Rotator import Gps2Rotator
 
 class RotatorCPanelController(QMainWindow):
-    def __init__(self, _rotator_handler: RotatorIOHandler):
+    def __init__(self, _rotator_handler: RotatorIOHandler, _buffer):
         super().__init__()
         self.rotator_handler = _rotator_handler
         self.btnOnOff_state = False
@@ -15,6 +15,7 @@ class RotatorCPanelController(QMainWindow):
         self.stop_tracking_event = threading.Event()
         self.stop_read_event = threading.Event()
         self.stop_GPSread_event = threading.Event()
+        self.gnss_buffer = _buffer
 
         self.end_el=0.0
         self.end_az=0.0
@@ -151,11 +152,33 @@ class RotatorCPanelController(QMainWindow):
             except:
                 pass
 
+
+
     def GPSReadThread(self, stop_thread_event: threading.Event):
+        def nmea2geodetic(data):
+            import numpy as np
+            lat_aux=data[0]/100
+            lat_deg=np.trunc(lat_aux)
+            lat_min=lat_aux-lat_deg
+            lat=lat_deg+lat_min/60
+
+            lon_aux=data[2]/100
+            lon_deg=np.trunc(lon_aux)
+            lon_min=lon_aux-lon_deg
+            lon=lon_deg+lon_min/60
+
+            data[0]=lat
+            data[2]=lon  
+            return data
+        
         stop_thread_event.clear()
         while not stop_thread_event.is_set():
             try:
-                lat,latSign,lon,lonSign,altOrt,undGeoide=GLOBALS.GLOBAL_GNSS
+                gnss_data = self.gnss_buffer.get()[0]
+                gnss_data[1]=chr(gnss_data[1])
+                gnss_data[3]=chr(gnss_data[3])
+                gnss_data=nmea2geodetic(gnss_data)
+                lat,latSign,lon,lonSign,altOrt,undGeoide=gnss_data
                 alt_error=False
                 if latSign=='S':
                     lat=-lat

@@ -127,33 +127,156 @@ class displayPanel(QMainWindow):
         status_thr = threading.Thread(target=self.statusReadThread,args=[self.stop_read_event], daemon=True)
         status_thr.start()
 
+
+    def dispPrint(self, data):
+        float2bytes = lambda x: struct.pack('f', float(x))
+        bytes2float = lambda x: struct.unpack('f', bytes(x))[0]
+        bytes2uint = lambda x: struct.unpack('<H', bytes(x))[0]
+        bytes2int = lambda x: struct.unpack('<h', bytes(x))[0]
+        
+        def bytes2nmea(data):
+            lat = bytes2float(data[0:4])
+            ns = data[4]
+            lon = bytes2float(data[5:9])
+            ew = data[9]
+            alt = bytes2float(data[10:14])
+            sep = bytes2float(data[14:18])
+            return [lat, ns, lon, ew, alt, sep]
+        
+        pos = 2
+        last_pos = pos
+        if(data.data[0] & bp.REQUIRED_DATA_GNSS):
+            last_pos = pos
+            pos+=18
+            gnss = bytes2nmea(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_GPSlat.setText(str(gnss[0]))
+            self.displayPanelWindow.lbl_GPSlon.setText(str(gnss[2]))
+            self.displayPanelWindow.lbl_GPSalt.setText(str(gnss[3]))
+            
+        
+        if(data.data[0] & bp.REQUIRED_DATA_ACELL):
+            last_pos = pos
+            pos+=2
+            accel_x = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_accelx.setText(str(accel_x))
+            last_pos = pos
+            pos+=2
+            accel_y = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_accely.setText(str(accel_y))
+            last_pos = pos
+            pos+=2
+            accel_z = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_accelz.setText(str(accel_z))
+
+        if(data.data[0] & bp.REQUIRED_DATA_GYRO):
+            last_pos = pos
+            pos+=2
+            gyro_x = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_gyrox.setText(str(gyro_x))
+            last_pos = pos
+            pos+=2
+            gyro_y = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_gyroy.setText(str(gyro_y))
+            last_pos = pos
+            pos+=2
+            gyro_z = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_gyroz.setText(str(gyro_z))
+
+        if(data.data[0] & bp.REQUIRED_DATA_MAGNETOMETER):
+            last_pos = pos
+            pos+=2
+            mag_x = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_magx.setText(str(mag_x))
+            last_pos = pos
+            pos+=2
+            mag_y = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_magy.setText(str(mag_y))
+            last_pos = pos
+            pos+=2
+            mag_z = bytes2int(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_magz.setText(str(mag_z))
+
+        if(data.data[0] & bp.REQUIRED_DATA_PRESSURE):
+            last_pos = pos
+            pos+=4
+            pressure = bytes2float(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_press.setText(str(pressure))  
+
+        if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_OUTDOOR):
+            last_pos = pos
+            pos+=4
+            t = bytes2float(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_tempout.setText(str(t))
+
+        if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_UP):
+            last_pos = pos
+            pos+=4
+            t = bytes2float(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_tempup.setText(str(t))
+            
+        if(data.data[0] & bp.REQUIRED_DATA_TEMPERATURE_BATTERY):
+            last_pos = pos
+            pos+=4
+            t = bytes2float(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_tempbatt.setText(str(t))
+            
+        if(data.data[1] & bp.REQUIRED_DATA_TEMPERATURE_DOWN):
+            last_pos = pos
+            pos+=4
+            t = bytes2float(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_tempdown.setText(str(t))
+
+        if(data.data[1] & bp.REQUIRED_DATA_PV_VOLTAGE):
+            last_pos = pos
+            pos+=2
+            pvV = bytes2uint(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_pvV.setText(str(pvV))    
+        
+        if(data.data[1] & bp.REQUIRED_DATA_PV_CURRENT):
+            last_pos = pos
+            pos+=2
+            pvA = bytes2uint(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_pvA.setText(str(pvA)) 
+        
+        if(data.data[1] & bp.REQUIRED_DATA_BATTERY_VOLTAGE):
+            last_pos = pos
+            pos+=2
+            batV = bytes2uint(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_batV.setText(str(batV)) 
+
+        if(data.data[1] & bp.REQUIRED_DATA_BATTERY_CURRENT):
+            last_pos = pos
+            pos+=2
+            batA = bytes2uint(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_batA.setText(str(batA)) 
+
+        if(data.data[1] & bp.REQUIRED_DATA_BATTERY_CHARGING):
+            last_pos = pos
+            pos+=2
+            batCh = bytes2uint(data.data[last_pos:pos])
+            self.displayPanelWindow.lbl_batcarga.setText(str(batCh)) 
+
+        if(data.data[1] & bp.REQUIRED_DATA_BATTERY_DIETEMP):
+            last_pos = pos
+            pos+=2
+            batDie = bytes2uint(data.data[last_pos:pos])
+            # COMPLETAR
+            # self.displayPanelWindow.lbl_magz.setText(str(batDie))
+
+        if(data.data[1] & bp.REQUIRED_DATA_CURRENT_TIME):
+            last_pos = pos
+            pos+=4
+            time = bytes2float(data.data[last_pos:pos])
+            # COMPLETAR
+            # self.displayPanelWindow.lbl_magz.setText(str(batDie))
+            
     def statusReadThread(self, stop_thread_event: threading.Event):
         stop_thread_event.clear()
         while not stop_thread_event.is_set():
-            time.sleep(0.1)
+            time.sleep(0.01)
             try:           
                 data = self.tm_buffer.get()
-                if data != []:
-                    #self.changeText(data)
-                    self.displayPanelWindow.lbl_accelx.setText(str(data[0]))
-                    # self.displayPanelWindow.lbl_accely.setText(GLOBALS.GLOBAL_ACELL[1])
-                    # self.displayPanelWindow.lbl_accelz.setText(GLOBALS.GLOBAL_ACELL[2])
-                    # self.displayPanelWindow.lbl_gyrox.setText(GLOBALS.GLOBAL_GYRO[0])
-                    # self.displayPanelWindow.lbl_gyroy.setText(GLOBALS.GLOBAL_GYRO[1])
-                    # self.displayPanelWindow.lbl_gyroz.setText(GLOBALS.GLOBAL_GYRO[2])
-                    # self.displayPanelWindow.lbl_magx.setText(GLOBALS.GLOBAL_MAG[0])
-                    # self.displayPanelWindow.lbl_magy.setText(GLOBALS.GLOBAL_MAG[1])
-                    # self.displayPanelWindow.lbl_magz.setText(GLOBALS.GLOBAL_MAG[2])
-                    # self.displayPanelWindow.lbl_press.setText(GLOBALS.GLOBAL_PRESS)
-                    # self.displayPanelWindow.lbl_tempout.setText(GLOBALS.GLOBAL_TEMP[0])
-                    # self.displayPanelWindow.lbl_tempup.setText(GLOBALS.GLOBAL_TEMP[1])
-                    # self.displayPanelWindow.lbl_tempbatt.setText(GLOBALS.GLOBAL_TEMP[2])
-                    # self.displayPanelWindow.lbl_tempdown.setText(GLOBALS.GLOBAL_TEMP[3])
-                    # self.displayPanelWindow.lbl_pvA.setText(GLOBALS.GLOBAL_PV[0])
-                    # self.displayPanelWindow.lbl_pvV.setText(GLOBALS.GLOBAL_PV[1])
-                    # self.displayPanelWindow.lbl_batV.setText(GLOBALS.GLOBAL_BATT[1])
-                    # self.displayPanelWindow.lbl_batA.setText(GLOBALS.GLOBAL_BATT[0])
-                    # self.displayPanelWindow.lbl_batcarga.setText(GLOBALS.GLOBAL_BATT[2])
+                self.dispPrint(data)    # CON ESTE FUNCIONA
             except:
                 pass
 

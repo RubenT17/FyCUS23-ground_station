@@ -10,7 +10,7 @@ from src.RotatorIOController import RotatorIOHandler, RotatorPacket
 
 
 class RotatorConnectController(QMainWindow):
-    def __init__(self):
+    def __init__(self, _gnss_buffer):
         super().__init__()
         self.rotatorConnectWindow = Ui_rotatorConnect()
         self.rotatorConnectWindow.setupUi(self)
@@ -20,6 +20,7 @@ class RotatorConnectController(QMainWindow):
         # Set parameters default configuration 
         self.baud_rate = GLOBALS.BAUD_RATE
         self.serial_port_name = GLOBALS.SERIAL_PORT
+        self.gnss_buffer = _gnss_buffer
 
         self.setSignalSlots()
 
@@ -49,7 +50,7 @@ class RotatorConnectController(QMainWindow):
             # Send offset to rotator
             self.rotator_handler.send(RotatorPacket('OF', self.rotator_handler._offset))
 
-            self.rotatorCPanelWindow = RotatorCPanelController(self.rotator_handler)
+            self.rotatorCPanelWindow = RotatorCPanelController(self.rotator_handler, self.gnss_buffer)
             self.close()
         except serial.SerialException as e:
             self.criticalMsgBox(e)
